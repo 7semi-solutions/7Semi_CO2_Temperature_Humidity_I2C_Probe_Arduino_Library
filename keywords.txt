@@ -1,0 +1,7 @@
+SevenSemiI2cStcc4	KEYWORD1
+ssBegin	KEYWORD2
+ssStartContinuousMeasurement	KEYWORD2
+ssStopContinuousMeasurement	KEYWORD2
+ssReadMeasurement	KEYWORD2
+ssGetProductId	KEYWORD2
+ssErrorToString	KEYWORD2
