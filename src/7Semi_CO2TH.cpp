@@ -1,4 +1,4 @@
-#include "7Semi_CO2TH.h"
+#include <7Semi_CO2TH.h>
 
 /** 7Semi CO2TH I2C Driver – Implementation
  * - Commands used:
@@ -97,90 +97,111 @@ uint64_t CO2TH_7Semi::be64_(const uint8_t* p) {
  * - Sets a candidate I2C address and probes by reading product ID
  * - Returns true if device responds and product ID matches CO2TH
  */
-bool CO2TH_7Semi::probeAt_(uint8_t address) {
-  addr_ = address;
-  uint32_t pid = 0;
-  uint64_t sn = 0;
-  err_t e = GetProductId(pid, sn);
-  return (e == NO_ERROR) && (pid == PRODUCT_ID);
-}
+// bool CO2TH_7Semi::probeAt_(uint8_t address) {
+//   addr_ = address;
+//   uint32_t pid = 0;
+//   uint64_t sn = 0;
+//   err_t e = GetProductId(pid, sn);
+//   return (e == NO_ERROR) && (pid == PRODUCT_ID);
+// }
 
 /** Begin
  * - Initializes with a Wire instance and target I2C address
  * - If i2cAddress == 0, scans 0x08..0x77 and verifies product ID
  * - Returns NO_ERROR on success; error code on failure
  */
-err_t CO2TH_7Semi::Begin(TwoWire& wire, uint8_t i2cAddress) {
-  wire_ = &wire;
-  measuring_ = false;
+// In your header, keep just this one declaration (remove the no-arg overload):
+// err_t Begin(int sda = -1, int scl = -1, uint32_t freq = 400000, int8_t i2cPort = 0);
 
-  if (i2cAddress != 0) {
-    addr_ = i2cAddress;
-    uint32_t pid = 0;
-    uint64_t sn = 0;
-    err_t e = GetProductId(pid, sn);
-    if (e != NO_ERROR) return e;
-    if (pid != PRODUCT_ID) return ERR_PARAM;
-    return NO_ERROR;
-  }
-
-  for (uint8_t a = 0x08; a <= 0x77; ++a) {
-    if (probeAt_(a)) return NO_ERROR;
-  }
-
-  addr_ = 0;
-  return ERR_PARAM; /* - Not found */
-}
-
-/**
- - ESP32 pins/bus aware Begin
- - On ESP32: optionally selects Wire/Wire1 and sets SDA/SCL/clock
- - On others: uses Wire.begin() and proceeds normally
-*/
-err_t CO2TH_7Semi::Begin(uint8_t i2cAddress, int sda, int scl,
-                         uint32_t freq, int8_t i2cPort) {
+err_t CO2TH_7Semi::Begin(int sda, int scl, uint32_t freq, int8_t i2cPort) {
+  /**
+   - Initializes I2C bus (ESP32: Wire/Wire1 + optional pins; others: Wire)
+   - Applies clock when supported
+   - Probes PRODUCT_ID to confirm device
+  */
 #if defined(ARDUINO_ARCH_ESP32)
-  // Select bus
   TwoWire* bus = (i2cPort == 1) ? &Wire1 : &Wire;
-
-  // Initialize with custom pins if provided, else defaults
   if (sda >= 0 && scl >= 0) {
     bus->begin(sda, scl, freq);
   } else {
-    bus->begin();  // board defaults
+    bus->begin();
     bus->setClock(freq);
   }
   wire_ = bus;
 #else
-  // Non-ESP32: fall back to default Wire
-  Wire.begin();
+  (void)sda; (void)scl; (void)i2cPort;
   wire_ = &Wire;
-  (void)sda;
-  (void)scl;
-  (void)freq;
-  (void)i2cPort;
+  wire_->begin();
+  // If your core supports it, you can uncomment:
+  // wire_->setClock(freq);
 #endif
 
-  // Reuse the original logic (addressed or auto-scan)
   measuring_ = false;
+  addr_ = 0x64;
 
-  if (i2cAddress != 0) {
-    addr_ = i2cAddress;
-    uint32_t pid = 0;
-    uint64_t sn = 0;
-    err_t e = GetProductId(pid, sn);
-    if (e != NO_ERROR) return e;
-    if (pid != PRODUCT_ID) return ERR_PARAM;
-    return NO_ERROR;
-  }
+  uint32_t pid = 0;
+  uint64_t sn  = 0;
+  err_t e = GetProductId(pid, sn);
+  if (e != NO_ERROR) return e;
+  if (pid != PRODUCT_ID) return ERR_PARAM;
 
-  for (uint8_t a = 0x08; a <= 0x77; ++a) {
-    if (probeAt_(a)) return NO_ERROR;
-  }
-
-  addr_ = 0;
-  return ERR_PARAM; /* - Not found */
+  return NO_ERROR;
 }
+
+
+// err_t CO2TH_7Semi::Begin() {
+//   wire_ = &wire;
+//   measuring_ = false;
+//      wire_->begin();
+//     addr_ = 0x64;
+//     uint32_t pid = 0;
+//     uint64_t sn = 0;
+//     err_t e = GetProductId(pid, sn);
+//     if (e != NO_ERROR) return e;
+//     if (pid != PRODUCT_ID) return ERR_PARAM;
+//     return NO_ERROR;
+// }
+
+// /**
+//  - ESP32 pins/bus aware Begin
+//  - On ESP32: optionally selects Wire/Wire1 and sets SDA/SCL/clock
+//  - On others: uses Wire.begin() and proceeds normally
+// */
+// err_t CO2TH_7Semi::Begin( int sda, int scl,
+//                          uint32_t freq, int8_t i2cPort) {
+// #if defined(ARDUINO_ARCH_ESP32)
+//   // Select bus
+//   TwoWire* bus = (i2cPort == 1) ? &Wire1 : &Wire;
+
+//   // Initialize with custom pins if provided, else defaults
+//   if (sda >= 0 && scl >= 0) {
+//     bus->begin(sda, scl, freq);
+//   } else {
+//     bus->begin();  // board defaults
+//     bus->setClock(freq);
+//   }
+//   wire_ = bus;
+// #else
+//   // Non-ESP32: fall back to default Wire
+//   Wire.begin();
+//   wire_ = &Wire;
+//   (void)sda;
+//   (void)scl;
+//   (void)freq;
+//   (void)i2cPort;
+// #endif
+
+//   // Reuse the original logic (addressed or auto-scan)
+//   measuring_ = false;
+
+//     addr_ = 0x64;
+//     uint32_t pid = 0;
+//     uint64_t sn = 0;
+//     err_t e = GetProductId(pid, sn);
+//     if (e != NO_ERROR) return e;
+//     if (pid != PRODUCT_ID) return ERR_PARAM;
+//     return NO_ERROR;
+// }
 /** GetProductId
  * - Issues 0x365B and reads 6 words (MSB,LSB,CRC × 6)
  * - Parses 32-bit Product ID and 64-bit Serial Number
@@ -260,119 +281,119 @@ err_t CO2TH_7Semi::ReadMeasurement(int16_t& co2ppm,
   return NO_ERROR;
 }
 
-/** setRhtCompensationRaw
- * - Programs absolute ambient T/RH for algorithm via 0xE000
- * - Payload: [T_MSB T_LSB T_CRC] [RH_MSB RH_LSB RH_CRC]
- * - Caches last written raw values for sgetRhtCompensationC
- * - Returns true on I2C ACK
- */
-bool CO2TH_7Semi::setRhtCompensationRaw(uint16_t temp_raw, uint16_t rh_raw) {
-  if (!wire_ || addr_ == 0) return false;
+// /** setRhtCompensationRaw
+//  * - Programs absolute ambient T/RH for algorithm via 0xE000
+//  * - Payload: [T_MSB T_LSB T_CRC] [RH_MSB RH_LSB RH_CRC]
+//  * - Caches last written raw values for sgetRhtCompensationC
+//  * - Returns true on I2C ACK
+//  */
+// bool CO2TH_7Semi::setRhtCompensationRaw(uint16_t temp_raw, uint16_t rh_raw) {
+//   if (!wire_ || addr_ == 0) return false;
 
-  const uint8_t t_msb = (uint8_t)(temp_raw >> 8);
-  const uint8_t t_lsb = (uint8_t)(temp_raw & 0xFF);
-  const uint8_t r_msb = (uint8_t)(rh_raw >> 8);
-  const uint8_t r_lsb = (uint8_t)(rh_raw & 0xFF);
+//   const uint8_t t_msb = (uint8_t)(temp_raw >> 8);
+//   const uint8_t t_lsb = (uint8_t)(temp_raw & 0xFF);
+//   const uint8_t r_msb = (uint8_t)(rh_raw >> 8);
+//   const uint8_t r_lsb = (uint8_t)(rh_raw & 0xFF);
 
-  uint8_t t_buf[2] = { t_msb, t_lsb };
-  uint8_t r_buf[2] = { r_msb, r_lsb };
-  const uint8_t t_crc = crc8_(t_buf, 2);
-  const uint8_t r_crc = crc8_(r_buf, 2);
+//   uint8_t t_buf[2] = { t_msb, t_lsb };
+//   uint8_t r_buf[2] = { r_msb, r_lsb };
+//   const uint8_t t_crc = crc8_(t_buf, 2);
+//   const uint8_t r_crc = crc8_(r_buf, 2);
 
-  wire_->beginTransmission(addr_);
-  wire_->write((uint8_t)(SET_RHT_COMPENSATION >> 8));
-  wire_->write((uint8_t)(SET_RHT_COMPENSATION & 0xFF));
-  wire_->write(t_msb);
-  wire_->write(t_lsb);
-  wire_->write(t_crc);
-  wire_->write(r_msb);
-  wire_->write(r_lsb);
-  wire_->write(r_crc);
+//   wire_->beginTransmission(addr_);
+//   wire_->write((uint8_t)(SET_RHT_COMPENSATION >> 8));
+//   wire_->write((uint8_t)(SET_RHT_COMPENSATION & 0xFF));
+//   wire_->write(t_msb);
+//   wire_->write(t_lsb);
+//   wire_->write(t_crc);
+//   wire_->write(r_msb);
+//   wire_->write(r_lsb);
+//   wire_->write(r_crc);
 
-  const bool ok = (wire_->endTransmission() == 0);
-  if (ok) {
-    comp_t_raw_ = temp_raw;
-    comp_rh_raw_ = rh_raw;
-    comp_valid_ = true;
-  }
-  return ok;
-}
+//   const bool ok = (wire_->endTransmission() == 0);
+//   if (ok) {
+//     comp_t_raw_ = temp_raw;
+//     comp_rh_raw_ = rh_raw;
+//     comp_valid_ = true;
+//   }
+//   return ok;
+// }
 
-/** clearRhtCompensation
- * - Convenience helper to program 0 values for both T and RH
- */
-bool CO2TH_7Semi::clearRhtCompensation() {
-  return setRhtCompensationRaw(0x0000, 0x0000);
-}
+// /** clearRhtCompensation
+//  * - Convenience helper to program 0 values for both T and RH
+//  */
+// bool CO2TH_7Semi::clearRhtCompensation() {
+//   return setRhtCompensationRaw(0x0000, 0x0000);
+// }
 
-/** setRhtCompensation
- * - Convenience helper for integer fixed-point inputs
- * - temp_offset_c_x100 in 0.01 °C units, rh_offset_pct_x100 in 0.01 % units
- * - Pass-through to raw writer; adjust encoding as needed per datasheet
- */
-bool CO2TH_7Semi::setRhtCompensation(int16_t temp_offset_c_x100, int16_t rh_offset_pct_x100) {
-  return setRhtCompensationRaw((uint16_t)temp_offset_c_x100,
-                               (uint16_t)rh_offset_pct_x100);
-}
+// /** setRhtCompensation
+//  * - Convenience helper for integer fixed-point inputs
+//  * - temp_offset_c_x100 in 0.01 °C units, rh_offset_pct_x100 in 0.01 % units
+//  * - Pass-through to raw writer; adjust encoding as needed per datasheet
+//  */
+// bool CO2TH_7Semi::setRhtCompensation(int16_t temp_offset_c_x100, int16_t rh_offset_pct_x100) {
+//   return setRhtCompensationRaw((uint16_t)temp_offset_c_x100,
+//                                (uint16_t)rh_offset_pct_x100);
+// }
 
-/** setRhtCompensationC
- * - Engineering-units wrapper for 0xE000
- * - Encodes T[°C] and RH[%] to ticks and calls raw writer
- */
-bool CO2TH_7Semi::setRhtCompensationC(float t_c, float rh_pct) {
-  if (!wire_ || addr_ == 0) return false;
-  const uint16_t t_raw = (uint16_t)lroundf(((t_c + 45.0f) / 175.0f) * 65535.0f);
-  const uint16_t rh_raw = (uint16_t)lroundf(((rh_pct + 6.0f) / 125.0f) * 65535.0f);
-  return setRhtCompensationRaw(t_raw, rh_raw);
-}
+// /** setRhtCompensationC
+//  * - Engineering-units wrapper for 0xE000
+//  * - Encodes T[°C] and RH[%] to ticks and calls raw writer
+//  */
+// bool CO2TH_7Semi::setRhtCompensationC(float t_c, float rh_pct) {
+//   if (!wire_ || addr_ == 0) return false;
+//   const uint16_t t_raw = (uint16_t)lroundf(((t_c + 45.0f) / 175.0f) * 65535.0f);
+//   const uint16_t rh_raw = (uint16_t)lroundf(((rh_pct + 6.0f) / 125.0f) * 65535.0f);
+//   return setRhtCompensationRaw(t_raw, rh_raw);
+// }
 
-/** TempCFromTicks
- * - Converts raw ticks to °C
- */
-static inline float TempCFromTicks(uint16_t raw) {
-  return (raw / 65535.0f) * 175.0f - 45.0f;
-}
+// /** TempCFromTicks
+//  * - Converts raw ticks to °C
+//  */
+// static inline float TempCFromTicks(uint16_t raw) {
+//   return (raw / 65535.0f) * 175.0f - 45.0f;
+// }
 
-/** RhPctFromTicks
- * - Converts  raw ticks to %RH
- */
-static inline float RhPctFromTicks(uint16_t raw) {
-  return (raw / 65535.0f) * 125.0f - 6.0f;
-}
+// /** RhPctFromTicks
+//  * - Converts  raw ticks to %RH
+//  */
+// static inline float RhPctFromTicks(uint16_t raw) {
+//   return (raw / 65535.0f) * 125.0f - 6.0f;
+// }
 
-/** sgetRhtCompensationC
- * - Returns cached compensation as engineering units
- * - Returns false if nothing has been written since power-up
- */
-bool CO2TH_7Semi::getRhtCompensationC(float& t_c, float& rh_pct) {
-  if (!comp_valid_) return false;
-  t_c = TempCFromTicks(comp_t_raw_);
-  rh_pct = RhPctFromTicks(comp_rh_raw_);
-  return true;
-}
+// /** sgetRhtCompensationC
+//  * - Returns cached compensation as engineering units
+//  * - Returns false if nothing has been written since power-up
+//  */
+// bool CO2TH_7Semi::getRhtCompensationC(float& t_c, float& rh_pct) {
+//   if (!comp_valid_) return false;
+//   t_c = TempCFromTicks(comp_t_raw_);
+//   rh_pct = RhPctFromTicks(comp_rh_raw_);
+//   return true;
+// }
 
-/** setPressureCompensationRaw
- * - Programs pressure compensation via 0xE016
- * - Payload: [P_MSB P_LSB P_CRC]
- * - Returns true on I2C ACK
- */
-bool CO2TH_7Semi::setPressureCompensationRaw(uint16_t pressure_raw) {
-  if (!wire_ || addr_ == 0) return false;
+// /** setPressureCompensationRaw
+//  * - Programs pressure compensation via 0xE016
+//  * - Payload: [P_MSB P_LSB P_CRC]
+//  * - Returns true on I2C ACK
+//  */
+// bool CO2TH_7Semi::setPressureCompensationRaw(uint16_t pressure_raw) {
+//   if (!wire_ || addr_ == 0) return false;
 
-  const uint8_t msb = (uint8_t)(pressure_raw >> 8);
-  const uint8_t lsb = (uint8_t)(pressure_raw & 0xFF);
+//   const uint8_t msb = (uint8_t)(pressure_raw >> 8);
+//   const uint8_t lsb = (uint8_t)(pressure_raw & 0xFF);
 
-  uint8_t buf[2] = { msb, lsb };
-  const uint8_t crc = crc8_(buf, 2);
+//   uint8_t buf[2] = { msb, lsb };
+//   const uint8_t crc = crc8_(buf, 2);
 
-  wire_->beginTransmission(addr_);
-  wire_->write((uint8_t)(SET_PRESSURE_COMPENSATION >> 8));
-  wire_->write((uint8_t)(SET_PRESSURE_COMPENSATION & 0xFF));
-  wire_->write(msb);
-  wire_->write(lsb);
-  wire_->write(crc);
-  return (wire_->endTransmission() == 0);
-}
+//   wire_->beginTransmission(addr_);
+//   wire_->write((uint8_t)(SET_PRESSURE_COMPENSATION >> 8));
+//   wire_->write((uint8_t)(SET_PRESSURE_COMPENSATION & 0xFF));
+//   wire_->write(msb);
+//   wire_->write(lsb);
+//   wire_->write(crc);
+//   return (wire_->endTransmission() == 0);
+// }
 
 /** measureSingleShot
  * - Triggers one single-shot measurement (0x219D)
