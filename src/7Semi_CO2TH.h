@@ -69,13 +69,6 @@ public:
    */
   CO2TH_7Semi();
 
-  /** Begin
-   * - Initializes with a Wire instance and a device address
-   * - If i2cAddress == 0, scans 0x08..0x77 and verifies Product ID
-   * - Returns NO_ERROR on success; error code otherwise
-   */
-  err_t Begin(TwoWire& wire, uint8_t i2cAddress);
-
   /**
    - Begin and (on ESP32) configure the I²C pins/clock/bus
    - sda/scl: pass -1 to use board defaults
@@ -83,8 +76,10 @@ public:
    - i2cPort: 0 -> Wire, 1 -> Wire1 (ESP32 only)
    - Works on non-ESP32 too; ignores pin args and just calls Wire.begin()
   */
-  err_t Begin(uint8_t i2cAddress = 0, int sda = -1, int scl = -1,
-              uint32_t freq = 400000, int8_t i2cPort = 0);
+err_t Begin(int sda = -1, int scl = -1, uint32_t freq = 400000, int8_t i2cPort = 0);
+
+ 
+
   /** GetProductId
    * - Sends GET_PRODUCT_ID (0x365B)
    * - Reads 6 words (MSB,LSB,CRC ×6)
@@ -111,43 +106,43 @@ public:
    */
   err_t ReadMeasurement(int16_t& co2ppm, float& temperature, float& humidity, uint16_t& status);
 
-  /** setRhtCompensationRaw
-   * - Programs absolute ambient T/RH for algorithm via SET_RHT_COMPENSATION (0xE000)
-   * - Payload on bus: [T_MSB T_LSB T_CRC] [RH_MSB RH_LSB RH_CRC]
-   * - Values are raw words (see datasheet conversion)
-   * - Cached internally for sgetRhtCompensationC
-   */
-  bool setRhtCompensationRaw(uint16_t temp_raw, uint16_t rh_raw);
+  // /** setRhtCompensationRaw
+  //  * - Programs absolute ambient T/RH for algorithm via SET_RHT_COMPENSATION (0xE000)
+  //  * - Payload on bus: [T_MSB T_LSB T_CRC] [RH_MSB RH_LSB RH_CRC]
+  //  * - Values are raw words (see datasheet conversion)
+  //  * - Cached internally for sgetRhtCompensationC
+  //  */
+  // bool setRhtCompensationRaw(uint16_t temp_raw, uint16_t rh_raw);
 
-  /** clearRhtCompensation
-   * - Convenience: programs both T and RH words to zero
-   */
-  bool clearRhtCompensation();
+  // /** clearRhtCompensation
+  //  * - Convenience: programs both T and RH words to zero
+  //  */
+  // bool clearRhtCompensation();
 
-  /** setRhtCompensation (fixed-point)
-   * - Convenience for 0.01-unit fixed-point inputs
-   * - temp_offset_c_x100 in 0.01 °C; rh_offset_pct_x100 in 0.01 %RH
-   * - Pass-through to raw writer; adjust mapping if needed
-   */
-  bool setRhtCompensation(int16_t temp_offset_c_x100, int16_t rh_offset_pct_x100);
+  // /** setRhtCompensation (fixed-point)
+  //  * - Convenience for 0.01-unit fixed-point inputs
+  //  * - temp_offset_c_x100 in 0.01 °C; rh_offset_pct_x100 in 0.01 %RH
+  //  * - Pass-through to raw writer; adjust mapping if needed
+  //  */
+  // bool setRhtCompensation(int16_t temp_offset_c_x100, int16_t rh_offset_pct_x100);
 
-  /** setRhtCompensationC (engineering units)
-   * - Encodes T[°C] and RH[%] to and writes via 0xE000
-   * - Used to provide the algorithm with absolute ambient values
-   */
-  bool setRhtCompensationC(float t_c, float rh_pct);
+  // /** setRhtCompensationC (engineering units)
+  //  * - Encodes T[°C] and RH[%] to and writes via 0xE000
+  //  * - Used to provide the algorithm with absolute ambient values
+  //  */
+  // bool setRhtCompensationC(float t_c, float rh_pct);
 
-  /** sgetRhtCompensationC
-   * - Returns last-programmed compensation as °C and %RH
-   * - CO2TH does not expose read-back; driver returns cached values
-   */
-  bool getRhtCompensationC(float& t_c, float& rh_pct);
+  // /** sgetRhtCompensationC
+  //  * - Returns last-programmed compensation as °C and %RH
+  //  * - CO2TH does not expose read-back; driver returns cached values
+  //  */
+  // bool getRhtCompensationC(float& t_c, float& rh_pct);
 
-  /** setPressureCompensationRaw
-   * - Programs pressure compensation via SET_PRESSURE_COMPENSATION (0xE016)
-   * - Payload on bus: [P_MSB P_LSB P_CRC]
-   */
-  bool setPressureCompensationRaw(uint16_t pressure_raw);
+  // /** setPressureCompensationRaw
+  //  * - Programs pressure compensation via SET_PRESSURE_COMPENSATION (0xE016)
+  //  * - Payload on bus: [P_MSB P_LSB P_CRC]
+  //  */
+  // bool setPressureCompensationRaw(uint16_t pressure_raw);
 
   /** measureSingleShot
    * - Triggers a single measurement (0x219D)
