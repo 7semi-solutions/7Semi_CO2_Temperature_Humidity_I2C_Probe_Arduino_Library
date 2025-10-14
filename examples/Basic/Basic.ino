@@ -1,5 +1,5 @@
 /***************************************************************
- * @file    Basic.ino
+ * @file    BasicRead.ino
  * @brief   Minimal demo for the 7Semi CO2TH I²C driver.
  *
  * Features demonstrated:
@@ -19,8 +19,8 @@
  *
  * Author  : 7Semi
  * License : MIT
- * Version : 1.0
- * Date    : 04 October 2025
+ * Version : 1.1
+ * Date    : 14 October 2025
  ***************************************************************/
 
 #include <7Semi_CO2TH.h>
@@ -38,12 +38,12 @@ void setup() {
     ;
   /** - Init driver (0 = auto-detect address 0x08..0x77) */
   // Ardiuno UNO
-  // err_t e = CO2TH.Begin(Wire, 0x64);
+  err_t e = CO2TH.Begin(Wire, 0x64);
   /**
    - Initialize I²C and the driver.
    - If you *know* the address, pass it (e.g., 0x64). If unknown, pass 0 to auto-scan 0x08..0x77.
   */
-  err_t e = CO2TH.Begin(/*addr*/ 0x64, /*sda*/ 21, /*scl*/ 22, /*freq*/ 400000, /*port*/ 0);
+  //err_t e = CO2TH.Begin(/*addr*/ 0x64, /*sda*/ 21, /*scl*/ 22, /*freq*/ 400000, /*port*/ 0);
   if (e != NO_ERROR) {
     Serial.print(F("Begin failed, err="));
     Serial.println((int)e);
